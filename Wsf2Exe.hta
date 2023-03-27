@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Windows Scripts to Executable - gyware.gyro.eu.org</title>
+<meta http-equiv="x-ua-compatible" content="ie=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<HTA:APPLICATION
+ID = "oHTA"
+APPLICATIONNAME = "HTChat"
+BORDER = "dialog"
+BORDERSTYLE = "normal"
+CAPTION = "yes"
+CONTEXTMENU = "yes"
+ICON = "wscript.exe"
+INNERBORDER = "no"
+MAXIMIZEBUTTON = "yes"
+MINIMIZEBUTTON = "yes"
+NAVIGABLE = "yes"
+SCROLL = "auto"
+SCROLLFLAT = "no"
+SELECTION = "yes"
+SHOWINTASKBAR = "yes"
+SINGLEINSTANCE = "yes"
+SYSMENU = "yes"
+VERSION = "1.0"
+WINDOWSTATE = "normal"
+/>
+<script type="text/javascript" language="javascript">
+window.resizeTo(640, 100);
+window.moveTo((screen.width - 640) / 2, (screen.height - 75) / 2);
+
+function convertScript(path, interpreter) {
+var fso = new ActiveXObject("Scripting.FileSystemObject");
+var shell = new ActiveXObject("WScript.Shell");
+//paths.forEach(function(path) {
+try {
+
+var script = fso.OpenTextFile(path, 1);
+var scriptContent = script.ReadAll();
+script.close();
+
+var tempDir = fso.GetSpecialFolder(2); // Get the path to the system's temporary directory
+var fileName = fso.GetTempName().replace(".tmp", "") + ".js";
+var filePath = tempDir.Path + "\\" + fileName; // Create the full path to the file
+var file = fso.CreateTextFile(filePath, true); // Create the file and open it for writing
+var output = 'import System;import System.IO;import System.Diagnostics;var args:String[]=Environment.GetCommandLineArgs();var c="' + scriptContent.replace('"', '\\"') + '",f=Path.ChangeExtension(Path.Combine(Path.GetTempPath(),Path.GetRandomFileName()), "' + fso.GetExtensionName(path) + '");File.WriteAllText(f,c);var p=Process.Start("' + interpreter + '","//nologo "+f+" "+args.join(" "));p.WaitForExit();File.Delete(f);';
+file.Write(output);
+file.Close();
+if (document.getElementById('name').value !== "") {
+var name = document.getElementById('name').value;
+} else {
+var name = fso.GetBaseName(path);
+}
+shell.run("%WINDIR%\\Microsoft.NET\\Framework64\\v4.0.30319\\jsc.exe\ /nologo /target:winexe /out:" + tempDir + "\\" + name + ".exe " + filePath, 0, true);
+new ActiveXObject("WScript.Shell").Popup("Conversion complete for script '" + path + "'", 0, "Done", 64 + 0 + 0);
+try {
+var excel = new ActiveXObject("Excel.Application");
+var outputPath = excel.GetSaveAsFileName(name, "Executable files (*.exe),*.exe,All files (*.*),*.*", 1, "Save As...");
+window.focus();
+if (!outputPath) return;
+} catch(err) {
+var outputPath = shell.CurrentDirectory;
+}
+fso.CopyFile(tempDir + "\\" + name + ".exe", outputPath);
+} catch(err) {
+new ActiveXObject("WScript.Shell").Popup("Error: Conversion failed.\r\nScript: " + path + "\r\nDescription: " + err.message, 0, "Error", 16 + 0 + 0);
+}
+//});
+}
+</script>
+</head>
+<body>
+<input type="file" id="scriptpath">
+<select id="scriptinterpreter">
+<option value="wscript" selected disabled hidden>Script Interpreter</option>
+<option value="wscript">WScript</option>
+<option value="cscript">CScript</option>
+</select>
+<input type="text" id="name" placeholder="Executable Name">
+<input type="button" value="Convert" onclick="if(document.getElementById('scriptpath').value !== ''){convertScript(document.getElementById('scriptpath').value, document.getElementById('scriptinterpreter').options[document.getElementById('scriptinterpreter').selectedIndex].value);}else{new ActiveXObject('WScript.Shell').Popup('Please select a script file first.', 0, 'Alert', 48 + 0 + 0);}">
+</body>
+</html>
